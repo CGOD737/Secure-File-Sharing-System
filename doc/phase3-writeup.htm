@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CS 1653 Project P3 Writeup</title>
+  <style>
+/* BEGIN CHANGES HERE */
+
+/* In this section, you may add CSS styling if desired.
+ * Be sure your writeup still prints legibly. */
+header {
+  text-align: center;
+}
+
+/* END CHANGES HERE */
+  </style>
+  <body>
+    <header>
+      <h1>CS 1653 Project P3 Writeup</h1>
+      <h2>
+<!-- BEGIN CHANGES HERE -->
+
+Christopher Godfrey: ctg18@pitt.edu
+Jared Carl: jmc316@pitt.edu
+
+<!-- END CHANGES HERE -->
+      </h2>
+    </header>
+    <section id="overview">
+      <h2>Overview</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>For Phase 3, the goal was to secure our group file sharing system by addressing four threats which will be gone through in extensive detail below.
+To address these threats, we applied a bunch of cryptic techniques using the Bouncy Castle API for java that will assist us in securing our file system, they are as follows:
+  <ul>
+    <li><b>Diffie-Hellman Key Exchange</b>: Using Diffie Hellman Protocol, any communications between the client and server will be started by exchanging
+    a shared secret key at the begininng of each session using modular exponentation. For example Bob and Alice will exchange two public integers which will be (mod q) and a base (g)
+    where (g) is some large prime number. Alice will then generate a secret key (a) and then compute (g^(a) mod q) and send that to Bob. Bob will then generate a secret key (b)
+    and then compute (g^(b) mod q) and then send that to Alice. They will then each have respectively ((g^(a) mod q)^(b) (mod q)) and  ((g^(b) mod q)^(a) (mod q)) which then produce
+    (g^(ab) mod q) on both sides when simplified which then be the secret shared key between Alice and Bob. 
+    </li>
+    <li><b>Salting and Hashing</b>: Salting and Hashing is used to securely store a password, after an encrypted password is exchanged and decrypted on the group servers
+    using Diffie-Hellman Protocol, the password is combined with the salt randomly generated salt and then goes through an iterative hash. That hash value is then stored
+    alongside the salt and the username. No matter what, Hashing allows for an arbitrary text to be transformed into a number or array of bytes representing the original string.
+    For our mechanism, we plan on hashing with around 100,000 iterations and salting our password with a 32-bit salt.
+    </li>
+    <li><b>RSA Signatures</b>: RSA Signatures involves having a RSA keypair for the Group Server in which case, an element will be signed with that private key only known to the server.
+    When a thid party wants to verify the signature, they can easily verify using the server's public key which is sent alongside the signed data. This is mainly used in the case of preventing
+    Token Modification and Forgery in which case we will signed a hashed value of the Token Signature and send that along with the Group Server's Public Key. The key will be 2048-bits with each private
+    and public key each being 1024 bits respectively. We think is a good secure standard. And has been proven to be secure in the past.
+    </li>
+    <li><b>AES-256</b>: Using the keys generated through the Diffie-Hellman Key Exchange, we will then encrypt anything that needs to be encrypted through AES-256. AES-256 has proven
+    to be secure at the moment taking a long time to brute force random key in order to actually get the contents of a message. We feel AES-256 will work great in the project and is easy
+    to implement and Compute. 
+    </li>
+
+
+  </ul>
+</p>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="threat1">
+      <h2>Threat T1: Unauthorized Token Issuance</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>Threat 1 is the idea that right now, any user can request any user's token.
+ for example, Bob starts RunClient and connects to the GroupServer. From there
+ Bob can grab whatever user token he wants at the moment. For example, he can type
+ in an admin's username and recieve full admin capabilities without actually being the
+ admin. From there Bob, then can pretty much do anything he wants and potentially ruin the
+ server and steal files from any group. On a user level, Bob can steal Alice's user token and
+ eventually have access to any of ALice's files.</p>
+
+<p>To counter the issue of Unauthorized Token Issuance, we came up with a password
+system as a method of authentication for the user. First, when the GroupServer is ran
+for the first time, the Server will ask the User to create a username and password which will
+become the username and password for the user which will be issued the "ADMIN" token. Then when createUser()
+is invoked, it will also require for a password to be created for that user. After the password is created, the server will then
+securely store the password. It will do this by passing the string password into a function that will first generate a random salt.
+That salt will be then added to the password string in which case, the whole password string + salt will then be hashed with SHA-256 using
+a large number iterations. After that is done, the hashed value and the salt value will then both be stored. To login and request a token, the
+user will then now have to enter a password to get their token. Once they entered the password, the Server will grab the salt from storage and then
+Hash it out with the indicated number iterations of SHA-256 hasing. The server will then compare that hashed value to the one that is stored and if there is match,
+the requested token for that user will be sent and if there isn't a match, then the server will send a message back to indicate that the password entered is wrong for that
+username.</p>
+
+<img src="images/T1diagram.png" alt="T1Diagram"></img>
+
+<p>Our proposed mechanism easily addresses the threat of Unauthorized Token Issuance through a simple authentication protocol which is a password. The password is assumed
+to be unique only known to the user. For instance Bob won't know Alice's password and Alice won't know Bob's password and no one would know the ADMIN's password. However,
+another problem that comes up with passwords is that if someone had access to the file where the username and passwords are stored, then they could easily access the password
+as each password would be listed as a string. This issue is fixed by the use of hashing and salts. Hashing will hide the passwords and the salts will cause the password to appear unique
+in the bin file. For example, if two user's have the password "dog1234", then the randomly generated salt will cause that string to become unique won't have the password
+hashed in the same way. That way when the someone is trying to view the bin file, they will see two unique hashed values instead of "dog1234" for that user. That way there is no
+way for an attacker to match any password to any user by simply accessing the user file. In this way unless Alice tells Bob her password, there is no way for Bob to get Alice's token,
+even if he somehow managed to gain access to the the bin file where the username and password's are stored. </p>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="threat2">
+      <h2>Threat T2: Token Modification/Forgery</h2>
+
+<!-- BEGIN CHANGES HERE -->
+
+<p>Threat 2 is that the idea that someone can modify their token from the one issued. As of now, there is no way for File Server or any outside source
+to prove that Bob should be a regular user even though he passed along an ADMIN token. He passed a long an admin token because he changed
+it after he recieved it to make it look like he has an admin token. This will compromise the security of any third party source. Bob with malicious intentions
+can access any Group's files, steal them, delete them, or modify them. For instance, if Bob wanted to access a File in his company's corporate group, all he would have to do
+as of now is change is token to ADMIN in which case he can simply go into that group and change a file from "Pay Bob 100$" to "Pay Bob 1000$". Thus here it violates the principle of integrity.
+Bob by accessing a group he is not supposed to is a violation of the princple of confidentiality. And finally if Bob wanted to, he can essentially spam any group with a bunch of files. By doing this a algorithm
+the file server could eventually run out of memory and crash in which case no one is able to access their files, thus violating the principle of availability. </p>
+
+<p>To counter the issue of token modification/forgery we will make use of RSA signature verification. At the time of the token request, after password verification, the
+group server will hash the token data. Then using the RSA key pair, the Group Server will sign the hashed data with a signature derived from the Group Server's private key
+in the RSA keypair. The server will send (token, H(tokendata).signed). The token data will then be serialized by concating the various parts of the token data structure.
+For example it will be declared like this; (Token = issuer+username+g1+gn). This serialization will then be hashed and sent alongside the token as a byte array.
+Assuming an agreed upon hashing algorithm, in which case, as long as the file server has access to the same hashing class that was created for password hashing, the file server or any third party appplication will then be able to verify the token using the server's public RSA key.
+However, we can't just send the public key alongside the token and Hashed Token. That way upon the creation of a file server, the file server will have to be delivered the group server's public key via trusted admin.
+want to create a fileserver to ensure that the file server has the key to verify the token. Instructions will be given to a a user specifically how to gain the public key in which case, the
+Group Server would have to deliver the key in person as the public key is stored out-of-band. 
+
+<img src="images/T2diagram.png" alt="T2Diagram"></img>
+
+<p>Our proposed mechanism easily addresses the issue of Token Modification/Forgery through a simple RSA approach. Let's say Bob tries to change their token to "ADMIN".
+There is no possible way for them to recompute the hash of token and siging it without knowing the GroupServer Private key. The only thing the user or anyone can do is verify the signature if they wanted.
+If Bob changes their token to "ADMIN", then it won't match hashed value along with the signature. If Bob tries to actually tries to change the signed hash value, it will just come out as a bunch of random
+garbage that won't even match the "ADMIN" token Bob tries to send. So using this, it would not be possible for Bob to modify the token and rehashing unless Bob got incredibly lucky in guessing the server's private
+RSA key. The public key being delivered in an out-of-band method ensures the legitmacy of the public key. The expectations of actually requesting a public key are fairly reasonable
+because the Group Server Owner would be expected to maintain the integrity of the users within the group server. By delivering it in person, we are ensuring that no outsiders can't
+possibly intercept the public key, modify it to fit their own private key signature and eventually use that to invade the fileserver it's running with files uploaded. </p>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="threat3">
+      <h2>Threat T3: Unauthorized File Servers</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>Threat 3 is the idea that when a user is attempting to connect to a File Server, it could be a different server from what the user
+wants to connect to. Currently, the user connects to a file server just by entering the server's address and port number, which are the
+bare minimum requirements to connect a client to a server. For example, if Bob wants to connect to a File Server being hosted by Alice,
+Bob will do so by entering Alice's ip address and the port number hosting the FileServer. An adversary that knows Alice's ip address and
+the port number Alice is hosting her file server on could use a VPN or some other device to change their ip to match Alice's and
+potentially get Bob to connect to their server instead of Alice's.</p>
+
+<p>To counter the issue of unauthorized file servers, we need to add file server authentication. We added a version of server
+authentication similar to how SSH does it. When the server is created, it generates a pair of 2048 bit RSA keys. When a user attempts
+to connect to the file server, the server sends the client their public key and a message encrypted with their private key. The client 
+will be shown the fingerprint of the public key, and it is up to the user if they trust that fingerprint is correct (Ideally, the owner
+of the fileserver can verify that is the correct fingerprint outside of out file share system). Then, if the client is able to correctly
+decipher the encrypted message, the user knows that the server holds the correct private key. </p>
+
+<p>Our proposed mechanism to address the threat of unauthorized file servers is an authentication of the usage of file servers. By
+comparing the public key fingerprint to a known value of the fingerprint, most likely given to the user by the server creator, the
+user knows that it belongs to the correct server. By decrypting the encrypted message, the client confirms that this server holds the
+private key corresponding to the public key it was given. Knowing the public key or fingerprint does not allow an attacker to imitate
+the server because they still have no information about the private key paired with the public key.</p>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="threat4">
+      <h2>Threat T4: Information Leakage via Passive Monitoring</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>Threat 4 is the idea that a passive attacker will be able to read all communications between a client and a server. This is a problem
+because an adversary who is able to read communications between the client and server can deduce information from what is sent. As of
+phase 2, the server and client use Envelopes to send each other information. These envelopes contain private information such as user
+tokens and file lists, as well as communications returned to the client about if the operation was completed correctly or why it wasn't.
+Obviously we do not want a passive attacker to be able to deduce this information from a communication.</p>
+
+<p>To counter the issue of information leakage via passive monitoring, there are a couple steps to take. First, we need to hide the
+information sent across the area of passive monitoring so an attacker can physically not read it.Every communication between client and server is an object
+of type Envelope, which contains a message and an arraylist of contents. The message will be Encrypted using symmetric key enecryption specifically AES-256. The block mode
+we will be using is CBC with a random IV. This has proven to be a useful mode of encryption and we felt other modes especially ECB has not been proven to be semantically secure.
+As mentioned previously, we will be using Diffie-Hellman Modular Exponentation Protocol to derive the shared secret key between the client and the server. That shared 
+secret key is created everytime a client and server connect to ensure that the key is unique every connection. Respectively, the contents of message aren't always just an intial
+string in which case we will have to adjust. For Token's, the serialization used in "T2" will be encrypted and sent. For files, the contents of the file will rewritten and sent. Any byte array as a 
+result of hashing will be transferred to a String using UTF-8 encoding.  </p>
+      
+<img src="images/T4diagram.png" alt="T4Diagram"></img>
+
+<p>Our proposed mechanism to address the threat of information leakage via passive monitoring revolves around every communication being an
+envelope of encrypted text. That way a passive attacker would not be able to deduce any information from a message sent from client to server or vice-versa without 
+knowing the secret key derived from the Diffie-Hellman approach. An attacker will be able to see that an envelope is
+passed between client and server, but without knowing the secret key, the attacker will not be able to come away with any useful information about the communication unless
+they were incredibly lucky in guessing the key.</p>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="discussion">
+      <h2>Discussion</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>A lot of project falls on implementing a class that deals with all the required hashing. T1, T2, T4 all make use of hashing in order
+to successfully achieve their goals, for instance, we plan to have a function that does general hashing and another function that hashes
+with salts in order to store passwords securely.</p>
+
+<p>Going through, we rethought of some ideas. For instance we intially thought we might not need a salt but we decided to include one to add
+to the uniqueness of each hashed password rather than having a chance of two user's with the same password. We also thought about using an HMAC
+for T2 but decided with RSA signature verification instead. For that to successfully work, we would need to have a shared secret key between the File Server
+and the group server and we felt that would be pretty hard to implement as we would have to have a way of direct communication between the File Server and Group Servers.
+Other than that, the only way to exchange the secret key would be to send them along with the user and we felt like that wouldn't be as secure as it wouldn't be considered
+"secret key" anymore. </p>
+
+<p>A few extra credit ideas we have/are in the process of implementing are as follows:
+  <ul>
+    <li><b>Ban System</b>: Any Admin can flag and ban a user they are suspicious of to protect the System.</li>
+    <li><b>File Flagging</b>: Flag certain file types and quarantine them rather than storing them to protect the File Server until they are verified</li>
+    <li><b>GUI</b>: Create a GUI so the user does not have to access the System from the Command Prompt</li>
+  </ul>
+</p>
+
+<p> Overall, we feel we have a suite that is capable of addressing the Threats Discussed. We feel we address all the security principles by going through this suite and ulitmately protecting
+the file sharing system. </p>
+
+<!-- END CHANGES HERE -->
+    </section>
+  </body>
+</html>

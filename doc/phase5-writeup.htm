@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CS 1653 Project P5 Writeup</title>
+  <style>
+/* BEGIN CHANGES HERE */
+
+/* In this section, you may add CSS styling if desired */
+header {
+  text-align: center;
+}
+
+/* END CHANGES HERE */
+  </style>
+  <body>
+    <header>
+      <h1>CS 1653 Project P5 Writeup</h1>
+      <h2>
+<!-- BEGIN CHANGES HERE -->
+
+Christopher Godfrey: ctg18@pitt.edu
+Jared Carl: jmc316@pitt.edu
+
+<!-- END CHANGES HERE -->
+      </h2>
+    </header>
+    <section id="overview">
+      <h2>Overview</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>Our Threat Model that we created is based on more of the assumption that the Client is the one actively trying to do harm to the System. Rather, that is why we decided to shift the focus
+to more Client Based Threats with the Group Server being trusted and the File Server being mostly trusted. Overall the involve things such as DoS attacks, Malware, File Deletion and Brute Force Attacks. The countermeasures
+we employed to defend against our Threats theoretically would prevent these attacks from happening.  </p>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="threatmodel">
+      <h2>Threat Model</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<h3>Trust Model</h3>
+<ul>
+  <li><b>Group Server: </b>We are assuming the Group Server is entirely trustworthy. It will only issue tokens to authenticated clients, and enforce constraints on group creation. It wil
+also ensure that the file containing the userlist and encrypted passwords along with group key information to not be publicly leaked.</li>
+  <li><b>File Servers: </b>We are assuming that File Server's are to largely be trusted. However, the possibility of a Rogue File/Server still exist in that one can try to steal tokens anybody
+  transfer files over but all in all, previous threats T6 and T7 have covered those extensively. In this threat model, they are to be mostly trusted.  </li>
+  <li><b>Clients: </b>Clients aren't assumed to be trustworthy. Clients can try to steal token's that belong to users and/or modify the tokens that they acquired from the group server to
+obtain special permissions that could belong to admins. They can also be assumed to disrupt the flow of information from the server by trying to effectively crash the Group Server which
+could prevent credible system users from gaining access to user token's and group's information. We can also assume a non attacking Client will want to use a password they already know. Overall,
+we can 't be expecting for a Client to use our provided Client Program in that they can simply design their own to attack the system.'</li>
+</ul>
+
+<h3>Threats</h3>
+<ul>
+  <li><b>T8 Denial of Service: </b>This Threat emphasizes the idea that the Group Server could be overridden with "get token" request that the server may not be able to able to process all
+the requests in a timely manner. One or two processes at a time could take at most a few milliseconds but millions of request at once can drastically slow down the server to the point
+where it is unsuable and impossible for anyone to gain access to token and group information in a timely manner. </li>
+  <li><b>T9 Malware in Uploaded File: </b>This Threat is the idea that a client can legally join a fileserver and then upload a file (e.g. an executable, batch, etc.) that could be harmful
+to any other user that downloads it and opens it.</li>
+  <li><b>T10 Re-upload of File: </b>This threat is the idea that a client can download a file in the fileserver, delete the original file, make changes to the downloaded file, and then
+upload that file with the changes and the same name to "overwrite" the original file which this user may not have created.</li>
+  <li><b>T11 Password Brute Force </b>This threat is the idea that a client, can try to get access to a user's token by simply running through a long list of strings and automatically entering strings
+  until that password comes out correct and this can be from a list of leaked passwords from another source.</li>
+
+</ul>
+
+
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="attack">
+      <h2>Attacks</h2>
+<!-- BEGIN CHANGES HERE -->
+<p><b>Denial of Service Attack: </b>The Denial of Service Attack is an attack that prevents users from gaining access to the system. In our case, the Denial of Service attack will be
+occuring on the Group Server via the via the "Request Token" function. Pretty much all the attacker client really would have to do is to send a bunch of request to the server before the
+server sends a response back to the client. Denial of Service Attack is easily possible because the Group Server takes a certain amount of time to process information. If the server gets overloaded with more information then it
+can handle, then the server will start to slow down. DOS is overall an attack on availability.</p>
+
+<p><b>Malware in Uploaded File: </b>The Maleware in Uploaded File Attack is an attack that could do damage to a client's computer in any number of ways depending on thefile that the
+adversary uploads. In the case of our fileserver system, the attack itself involves a client, Bob, uploading a malicious file, a .exe in this example, to the fileserver. If another client
+in the fileserver, Alice, wants to see this file and she downloads it and opens it, the .exe will execute as opposed to opening like a normal text file. Depending on what Bob wrote in the
+ .exe, this could be harmful to Alice's computer. This attack is possible especially in our File Sharing system because file types aren't limited. In fact, anyone can upload any file they want.</p>
+
+<p><b>File Deletion Attack: </b>The file deletion attack is an attack that exploits all users in a group having the same permissions on all files in that group, not depending on who
+actually uploaded the files. The file deletion attack involves a client, Bob, logging in to a fileserver, downloading and deleting a file that was uploaded by fellow groupmember Alice,
+and then uploading a changed version to the fileserver.</p>
+
+<p><b>Brute Force Password Attack:</b>The idea behind this attack is that an attacker can simply request tokens by automatically going through a long list of leaked passwords and trying each
+until they guess correctly. This attack is possible because leaked sources from other password databases can contain the password used on this Group File Sharing System. They can simply input the username
+they want to attack and run the brute force until they are able to successfully login and grab that person's token. This attack can also be done just by generic brute force which would most likely be more
+unsucessful because the longer the password they are trying to guess, the greater the amount of time it takes. Overall, this attack is possible on two fronts, the leaked password files from other Systems and databases
+and just generic bruteforce that could either just search every possible string or search look for certain words combinations.</p>
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="countermeasure">
+      <h2>Countermeasures</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p><b>T8 Countermeasure: </b>A countermeasure to use to prevent DOS attacks is the use of computitional puzzles. The puzzle generated will have to have three very important properties:</p>
+<ol>
+  <li>The Puzzle is easy to generate on the server side.</li>
+  <li>The Puzzle is easy to solve on the client's hardware. </li>
+  <li>The Puzzle requires at least some computitional power to solve </li>
+</ol>
+<p>This puzzle will involve hashing and is showcased in the Diagram below. A client first sends a connection request to the server. In response to that connection request, the server generates a puzzle by first generating
+a random number (M) first. Then the Server will generate another random (N) in which case, the server will Hash the number (M) over (N) iterations. Once the server is completed, the server will send (M) and H(M) over that certain number
+of iterations to the client. The client will then have to solve to find how many iterations of hashing M using SHA-256 will result in the value the server sent. Once the client finds that value, it will send it back to the server in which case,
+the server will have that value stored for verification. If the client responds with the correct answer, then the connection is accepted, otherwise, the connection request is denied.</p>
+
+<img src="images/T8.png" alt="T8Diagram"></img>
+
+<p>This method will prevent DoS attacks because solving the puzzle will be more a burden on the Client side's computitional power than the Server's side even if it's not too much. If the puzzle takes more time to complete than it takes for the server to completed
+any kind of request, then the server will be essentially protected from DoS attacks from most clients because the queue and build up of request only happens when the server is getting a lot of request before it can process any.</p>
+
+<p><b>T9 Countermeasure: </b>As a countermeasure to the malware in uploaded file attack, we can add an implementation for the user to clarify the legitimacy of other users in the group. The actual methods are
+already implemented into our previous designs, which is to store a file in the FileList with the creator's username. The change is, when a user chooses to download a file, the FileList
+can provide the username of the file creator, thus allowing the user wanting to download to check and make sure they trust that user. This leaves the choice of whether or not to trust the
+ downloaded file up to the user, but now the user knows the additional information of the file's uploader to help in that decision.</p>
+
+<p>Another way to prevent Malware is to quarntine all exectutable files until they can be verified to be safe. Files with the extensions of ".exe, .class, .o, .py, .jar, etc..." will all be stored separtely and kept away from general use until they are verified to be safe.
+Verification is a whole other process and quarantining them is generally enough assuming that the ADMIN decides to verify them outside of the scope of the system through potentially a third party scanner program that the server owner trust.</p>
+
+<p><b>T10 Countermeasure: </b>As a countermeasure to the ile deletion attack, we can once again use the feature of the FileList storing the username of the user who creates a file. When a user intends to delete a
+file, we will  add an additional check to FileThread to see if this user is the user who created the file. If not, do not allow this user to delete the intended file. This prevents file
+ deletion attacks because now if a client joins a groupserver and decides to try to destroy or change data, the client can no longer delete files or overwrite files with changes the client
+ made. The client can only upload files with new, different names from files already existing on that FileServer.</p>
+
+ <p><b>T11 Countermeasure: </b>There are a lot of ways that a Brute Force password can be avoided and there's a whole list of potential mechanisms that we will provide: </p>
+ <ol>
+   <li><b>Limited Password Attempts: </b> By setting the limit of number of password attempts to maybe something like 5 per minute, we can essentially limit the attacking capabilities of a single attacker drastically slowing their brute-force. This will be tracked
+   based on the IP address and the account info. For instance, at a certain IP address you can only access the groupserver in general every five minute. However if the attacker then trys another IP address such as a VPN, then server will also look at the account to see
+   the amount of most recent password attempts.</li>
+   <li><b>Dual Factor Authentication: </b> To further protect the account, Dual Factor Authentication will be used. Pretty much the Group Server will generate an unique key and send that to the user OUT-OF-BAND, maybe an email, phone number, txt etc... The user will then
+   use that generated key to login which could be some randomly generated alpha-numerical string of a certain. Since this key is unique and random, it will be hard to brute force a password and try to guess the key. The key will eventually time-out maybe like after 5 minutes
+   to give the user some time to grab that key.</li>
+   <li><b>Password Length Requirement: </b> Simply put, the longer your password, the longer it will take to brute force and guess it.</li>
+   <li><b>Password Check vs. Dictionary: </b> The password will be checked among a list of common words and strings and simple passwords such as "dog1234". This will prevent the possibility of password reuse from other sources because we assume that the client will want to use passwords
+   they will already know. By allowing the user to create their own password rather than having the group server just generate it, we are simply giving the user a better chance to put it in their memory, than risking they forget it.
+ </ol>
+
+ <p>A simple combination of the items listed above will prove to safely secure the file system in that no one can simply just take from a list of passwords or guess thousands of times in order to actually break in and get the user's token.</p>
+
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="discussion">
+      <h2>Discussion</h2>
+<!-- BEGIN CHANGES HERE -->
+<p>We believe our threat model is moderately realistic for a real-life file sharing system. In a real-life application, the GroupServer would be run by one of us, so that is to be entirely
+trustworthy. The fileservers are not entirely trusted on the basis that an untrusted client could start one. If a trustworthy client starts a fileserver, we consider that fileserver to be
+trustworthy. But in a real-world application, the admin (at least initially) has no indication on which clients can be trusted or not, so in this light fileservers are not entirely
+trustworthy. Clients are assumed to be not trustworthy whatsoever. This is a pretty realistic expectation for any real-world application, both to prevent adversaries from gaining any
+useful information and from innocent users from making mistakes that crashes their program or damages their or anybody else's data.</p>
+<p></p>
+
+<p>For Threats T9 and T10, we did not have to design countermeasures around re-introducing older threats because a decent portion of the countermeasure was already implemented in our
+design from the beginning, that being storing usernames in Sharefiles. Since none of the threats involved file identification from within group members in the file server, we would be
+able to introduce the countermeasures for T9 and T10 without concern of bringing up a previous threat.</p>
+
+<p>The only thing we believe we have for extra credit is a password length requirement within the server file at ADMIN token creation and group thread at generic token creation.</p>
+<!-- END CHANGES HERE -->
+    </section>
+  </body>
+</html>

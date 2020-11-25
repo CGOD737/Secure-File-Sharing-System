@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CS 1653 Project P4 Writeup</title>
+  <style>
+/* BEGIN CHANGES HERE */
+
+/* In this section, you may add CSS styling if desired.
+ * Be sure your writeup still prints legibly. */
+header {
+  text-align: center;
+}
+
+/* END CHANGES HERE */
+  </style>
+  <body>
+    <header>
+      <h1>CS 1653 Project P4 Writeup</h1>
+      <h2>
+<!-- BEGIN CHANGES HERE -->
+
+Christopher Godfrey: ctg18@pitt.edu
+Jared Carl: jmc316@pitt.edu
+
+<!-- END CHANGES HERE -->
+      </h2>
+    </header>
+    <section id="overview">
+      <h2>Overview</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<!-- BEGIN CHANGES HERE -->
+
+<p>In this section, broadly overview the types of cryptographic techniques that
+your group has decided to use to address threats T5–T7.</p>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="threat5">
+      <h2>Threat T5: Message Reorder, Replay, or Modification</h2>
+<!-- BEGIN CHANGES HERE -->
+<p>Threat 5 deals with the concept that an active attacker can modify, save, or reorder messages sent between the user and a file server or group server. Even if a server is authenticated using the threat models from phase 3,
+the new threat models for phase 4 indicate that all servers are liable to having their communications intercepted by an active attacker. This is a problem because if an attacker can save or modify any communications between the
+server and a client, it is a breach in confidentiality of that communication, and also an inconvenience between the client and server since they may not even get the intended communication. If a client Bob is trying to communicate with
+Alice's server, according to threat models from phase 3, an outside attacker Alex can only passively attack the messages, or just look at them. We incorporated defenses against a passive attack in phase 3. Now, Alex can actively attempt
+t modify the messages sent between Bob and ALice's server. Because of this, both Bob and Alice's server need to know when the messages are tampered, reordered, and replayed. The action after this detection is to terminate the connection.</p>
+
+<p>To counter this threat, we are going to add two implementations to counter the two effects of an active attacker. First, to notify entities of message modification, we are going to add a SHA-256 HMAC to the already encrypted messages sent between
+servers and clients using the already generated shared key between the entities. This will allow the recipient to see if the message recieved holds the same data as the message that was sent. Second, to notify the server and client of an attacker saving messages to replay, we are going to add a counter to
+the elements in a message sent between the client and server. This counter starts at 0 for the first transmission, and increments every time a message is recieved. This will detect replay attacks and saving of messages by checking to make sure
+the counter is just incremented once between when an entity sends a message and from when it recieves the response message. See below for a graphical representation of the protocol
+we have implemented. For the protocol diagram, assume any contents being sent over data streams between client and servers will be automatically encrypted.</p>
+
+<img src="images/T5.png" alt="T5Diagram"></img>
+
+<p>This mechanism sufficiently addresses the issue of Message reordering, replaying, and modification because the HMAC notifies the communication of any type of message modification, and the counter will be abnormal when a replay attack is attempted
+and detected as such. This is because every time a message is recieved, the reciever checks to see if the counter is exactly two greater than it was last time (unless it is the first message between the client and server). When the reciever sends a response
+back to the original sender, it increments the counter. If a message is recieved and it is less than 2 greater than the last time the reciever saw the counter, the reciever will be suspicious of the message being saved since it took noticibly
+longer to transmit, which is the fingerprint of a replay attack. Also, the shared key used in the HMAC will be generated using the Diffie Hellman key exchange we implemented in phase 3.
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="threat6">
+      <h2>Threat T6: File Leakage</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>Threat 6 deals with the concept that certain files may be leaked from the file server to adversaries that are not supposed to view them. These adversaries are most likely not part
+of the group that these files were meant for. This is a result of the Trust Model which states that File Servers are largely untrusted in which case, any data leakage will violate the principle
+of confidentiality. For instance if Bob and Alice are in two different groups, Alice should not be able to conspire with the File Server to see the files. Another part of this threat is once group membership
+changes, then that person should not be able to view the group's files anymore. For instance, if Bob is removed from group "WorkProject", then Bob should not be able to view WorkProject's project files again.</p>
+
+<p>To counter this threat, Symmetric Key encryption will be used. Upon a group's creation, a private AES-256 key will be generated for the specific group. This key will be regenerated everytime the group admin calls the delete
+member from group to prevent that member from having access to the same encryption key. Before a file is sent over to the file server, it encrypted using that key. That encrypted file is then stored on the File Server in which case,
+the File Server will not be able to see the contents of the file. When a user wants to download a file from the file server, they will then use their group's private key to decrypt it. See below for a graphical representation of the protocol
+we have implemented. For the protocol diagram, assume any contents being sent over data streams between client and servers will be automatically encrypted.See below for a graphical representation of the protocol
+we have implemented. For the protocol diagram, assume any contents being sent over data streams between client and servers will be automatically encrypted.
+
+<img src="images/T6.png" alt="T6Diagram"></img>
+
+<p>This mechanism sufficiently addresses the issue of File Leakage because a private key  is stored that is only accessible to the group that the key is generated. So anyone outside the group who manages to gain access to the
+can't read the contents of the file unless they have the group's private key. Past members cannot request files again because any new files encrypted will be encrypted using a new key. Thus any attempts to decrypt files from that group will
+be stopped immediately. We can assume that a person removed from a group would have had access to all the files in the past so if the files were leaked, then it wouldn't be an issue if the removed member to use the old key because he had access
+to the files in the past and most likely had them download on their local machine if they were important enough to them.</p>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="threat7">
+      <h2>Threat T7: Token Theft</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>Threat T7 deals with the concept that Tokens can be interecepted or stolen and given to other users in which case they can try to use the token to gain access to other groups on other servers using that token. This is also another attack on confidentiality
+a group as anyone with a token that belongs to a user now would have access to any of the groups that person had access to. Thus, they are able to access all their files.</p>
+
+<p>To counter this threat, the Token class will be adjusted to allow only the intended file server to use the token. To do this when requesting a token, a user will have to enter the file server's fingerprint when requesting a token from the group server. The group server
+will have to retrieve the file server's fingerprint which was done in T3 in file server authentication. Within the Token class, we have a mechanism where the the Token will ask the fileserver or anything access any of the functions to verify the fingerprint. If for some
+reason the fingerprint verification were to fail, then the contents of the token will purged and then the user will have to request a new token. We will also implement a timestamp in which case if the token were to be used 5 minutes after the token's creation, then the token's
+contents will be purged in which case the user will then have to request a new token. See below for a graphical representation of the protocol
+we have implemented. For the protocol diagram, assume any contents being sent over data streams between client and servers will be automatically encrypted.
+</p>
+
+<img src="images/T7.png" alt="T7Diagram"></img>
+
+<p>This mechanism sufficiently address the Token Theft threat. For one, since the file server is the only one that can reproduce its own fingerprint, then the token can be only used on the file server that it was intended and if any other server tried to use that token, the Token
+will then become unusable. It also limits the time after the token's creation in which case if for some reason that a user stole the token and tried to possibly use it on that file server. Then the token will be rendered useless anyone after a certain amount of time. </p>
+
+<!-- END CHANGES HERE -->
+    </section>
+    <section id="discussion">
+      <h2>Discussion</h2>
+<!-- BEGIN CHANGES HERE -->
+
+<p>Pretty much we developed our project even further by essentially adding to existing classes that we already had in place. We didn't really add anything new but rather built on what we previously had. For instance, implemtned HMACS within the Hasher Class and modified the tokens
+class in order to ensure that token is supposed to be used where it's supposed to be used.</p>
+
+<p>All of our protocols that were implemented within phase 3 are still valid for phase 4. T1 we needed to be more specific on how the user can grab the password so we added that the user's login information is transferred out-of-band from the ADMIN who created their login info to
+the user themself. For T2, it is still a requirement that the GroupServer's Public Key be transferred directly to the owner of the FileServer to prevent any sort of modification on the client's end. Finally messages are always encrypted using the shared key generated by the DiffieHellman
+protocol that we have implemented. T3, clearly addresses the FileServer authentication and nothing has changed for that portion. For T4, the AES encryption/decryption is still in place and still prevents passive listening, however an HMAC was added as another layer ontop of the encryption to ensure that the message contents have not been modified in anyway.  </p>
+
+<p>If your group did any extra credit, please discuss that in this section, as
+well.</p>
+
+<!-- END CHANGES HERE -->
+    </section>
+  </body>
+</html

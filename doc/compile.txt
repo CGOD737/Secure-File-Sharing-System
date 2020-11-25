@@ -1,0 +1,3 @@
+Once inside src/ folder,
+
+COMPILE: javac -cp .;<CLASSPATH>/bcprov-jdk15on-166.jar *.java
